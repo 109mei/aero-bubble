@@ -21,6 +21,9 @@ export class World {
   private lastMs: number | null = null;
   private unlockedKey = '';
   private unlocked: ReadonlySet<string> = new Set();
+  /** 描画の細かさの倍率。フレームが遅い端末では下げていく */
+  private quality = 1;
+  private slow = 0;
 
   private constructor(
     private readonly app: Application,
@@ -37,7 +40,8 @@ export class World {
       width: layout.vw,
       height: layout.vh,
       background: '#2F9BEE',
-      antialias: true,
+      // 絵はすべてなめらかな絵（テクスチャ）なので、重いアンチエイリアスは使わない
+      antialias: false,
       autoDensity: true,
       resolution: World.resolution(),
       preference: 'webgl',
@@ -60,17 +64,37 @@ export class World {
   resize(layout: Layout): void {
     this.layout = layout;
     const res = World.resolution();
-    this.app.renderer.resolution = res;
-    this.app.renderer.resize(layout.vw, layout.vh);
+    this.applyResolution();
     this.sea.resize(layout, res);
     this.board.resize(layout, res);
+  }
+
+  private applyResolution(): void {
+    this.app.renderer.resolution = Math.max(0.75, World.resolution() * this.quality);
+    this.app.renderer.resize(this.layout.vw, this.layout.vh);
+  }
+
+  /** フレームが続けて遅いときは、描画の細かさを下げる（GPU の弱い端末で、指の操作を遅らせないため） */
+  private adapt(dt: number): void {
+    if (dt <= 0) return;
+    // 30fps の端末（省電力の iPhone など）では下げない
+    if (dt > 0.042) this.slow += dt;
+    else this.slow = Math.max(0, this.slow - dt * 0.5);
+    if (this.slow > 1.5 && World.resolution() * this.quality > 0.75) {
+      this.quality *= 0.8;
+      this.slow = 0;
+      this.applyResolution();
+    }
   }
 
   /** 毎フレーム呼ぶ */
   render(state: GameState, events: GameEvent[], mode: WorldMode, reduced: boolean, nowMs: number, minChain: number): void {
     const now = nowMs / 1000;
-    const dt = this.lastMs === null ? 0 : Math.min(0.1, Math.max(0, (nowMs - this.lastMs) / 1000));
+    const raw = this.lastMs === null ? 0 : Math.max(0, (nowMs - this.lastMs) / 1000);
+    const dt = Math.min(0.1, raw);
     this.lastMs = nowMs;
+    // 描かなかった間（シートを開いていた・画面が隠れていた）の長い間隔は、遅さに数えない
+    if (raw < 0.5) this.adapt(raw);
     const L = this.layout;
     const target = mode === 'title' ? L.surfaceTitle : L.surfaceGame;
     if (this.surface < 0 || reduced) this.surface = target;
@@ -87,9 +111,9 @@ export class World {
     this.app.render();
   }
 
-  /** テスト用：盤面の描画の数 */
-  stats(): ReturnType<BoardView['stats']> {
-    return this.board.stats();
+  /** テスト用：盤面の描画の数と、描画の細かさ */
+  stats(): ReturnType<BoardView['stats']> & { resolution: number } {
+    return { ...this.board.stats(), resolution: this.app.renderer.resolution };
   }
 
   destroy(): void {

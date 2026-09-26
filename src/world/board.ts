@@ -1,9 +1,10 @@
 import { Container, Graphics, Sprite, type Texture } from 'pixi.js';
 import { bestChain, hexDistance, type Bubble, type GameEvent, type GameState, type PopCell } from '../core';
-import { BUBBLE_COLORS, paintBomb, paintBubble, paintDroplet, paintGlow, paintPrism, paintRing, paintSparkle } from './art/bubbles';
+import { BUBBLE_COLORS, paintBeam, paintBomb, paintBubble, paintDot, paintDroplet, paintGlow, paintPrism, paintRing, paintSparkle } from './art/bubbles';
 import { paintPanel } from './art/scenery';
 import { Fx } from './fx';
 import { cellCenter, type Layout } from './layout';
+import { LinkView } from './link';
 import { pointer } from './pointer';
 import { canvasTexture, TextureBag } from './textures';
 
@@ -65,7 +66,7 @@ export class BoardView {
   private readonly glowLayer = new Container();
   private readonly bubbleLayer = new Container();
   private readonly ringLayer = new Container();
-  private readonly link = new Graphics();
+  private readonly link: LinkView;
   private readonly fx = new Fx();
   private readonly sprites = new Map<number, BubbleSprite>();
   private dying: Dying[] = [];
@@ -74,6 +75,8 @@ export class BoardView {
   private roundRef: unknown = null;
   private visible = 0;
   private lastActivity = 0;
+  /** 長くつないで生まれた特別な泡は、最後の泡の場所から現れる（id → 場所） */
+  private readonly spawnAt = new Map<number, { x: number; y: number }>();
   private hint: number[] = [];
   private hintKey = '';
   private feverGlow = new Sprite();
@@ -87,6 +90,10 @@ export class BoardView {
       drop: b.get('drop', () => canvasTexture(32, 32, (c, w) => paintDroplet(c, w))),
       spark: b.get('spark', () => canvasTexture(64, 64, (c, w) => paintSparkle(c, w))),
     };
+    this.link = new LinkView(
+      b.get('beam', () => canvasTexture(64, 32, (c, w, h) => paintBeam(c, w, h))),
+      b.get('dot', () => canvasTexture(64, 64, (c, w) => paintDot(c, w))),
+    );
     this.glowLayer.blendMode = 'add';
     this.feverGlow.texture = this.tex.glow;
     this.feverGlow.anchor.set(0.5);
@@ -94,7 +101,7 @@ export class BoardView {
     this.feverGlow.alpha = 0;
     this.layer.addChild(this.glowLayer, this.bubbleLayer, this.ringLayer);
     this.layer.mask = this.maskG;
-    this.root.addChild(this.feverGlow, this.panel, this.maskG, this.layer, this.link, this.fx.root, this.fx.addRoot);
+    this.root.addChild(this.feverGlow, this.panel, this.maskG, this.layer, this.link.root, this.fx.root, this.fx.addRoot);
   }
 
   resize(layout: Layout, res: number): void {
@@ -197,6 +204,7 @@ export class BoardView {
     for (const d of this.dying) d.sprite.destroy();
     this.dying = [];
     this.fx.clear();
+    this.spawnAt.clear();
     this.hint = [];
     this.hintKey = '';
   }
@@ -256,6 +264,7 @@ export class BoardView {
         if (e.made !== null && e.madeId !== null) {
           const last = e.cells[e.cells.length - 1]!;
           const at = cellCenter(L.board, last.cell);
+          this.spawnAt.set(e.madeId, at);
           const tint = e.made === 'bomb' ? 0x8ff0ff : 0xfff3a0;
           this.fx.spawn({ tex: this.tex.glow, x: at.x, y: at.y, life: 0.6, delay: e.cells.length * 0.035, size0: r * 2, size1: r * 7, alpha0: 0.9, tint, add: true });
           if (!f.reduced) {
@@ -386,7 +395,12 @@ export class BoardView {
           continue;
         }
         const at = cellCenter(B, i);
-        if (first) {
+        const born = this.spawnAt.get(b.id);
+        if (born) {
+          // 長くつないで生まれた特別な泡：最後の泡の場所でぽんと現れ、列が詰まるのに合わせて動く
+          this.spawnAt.delete(b.id);
+          this.makeSprite(b, born.x, born.y, f.now);
+        } else if (first) {
           // あそびの始まり：その場でぽんと現れる
           this.makeSprite(b, at.x, at.y, f.now + (f.reduced ? 0 : c * 0.04 + row * 0.03));
         } else {
@@ -516,10 +530,11 @@ export class BoardView {
   }
 
   private drawLink(f: BoardFrame): void {
-    const g = this.link;
-    g.clear();
     const r = this.lastState?.round ?? null;
-    if (!r || r.chain.length === 0 || !this.layout) return;
+    if (!r || r.chain.length === 0 || !this.layout) {
+      this.link.clear();
+      return;
+    }
     const B = this.layout.board;
     const pts: { x: number; y: number }[] = [];
     for (const c of r.chain) {
@@ -530,24 +545,7 @@ export class BoardView {
     const color = BUBBLE_COLORS[r.board.cells[r.chain[0]!]!.color % 6]!;
     const last = pts[pts.length - 1]!;
     const tail = pointer.active && Math.hypot(pointer.x - last.x, pointer.y - last.y) > B.r * 0.6 ? { x: pointer.x, y: pointer.y } : null;
-    const path = (list: { x: number; y: number }[]) => {
-      g.moveTo(list[0]!.x, list[0]!.y);
-      for (const p of list.slice(1)) g.lineTo(p.x, p.y);
-    };
-    if (pts.length >= 2) {
-      path(pts);
-      g.stroke({ width: B.r * 0.75, color: color.glow, alpha: 0.45, cap: 'round', join: 'round' });
-      path(pts);
-      g.stroke({ width: B.r * 0.28, color: 0xffffff, alpha: 0.95, cap: 'round', join: 'round' });
-    }
-    if (tail) {
-      g.moveTo(last.x, last.y);
-      g.lineTo(tail.x, tail.y);
-      g.stroke({ width: B.r * 0.16, color: 0xffffff, alpha: 0.55, cap: 'round' });
-    }
-    for (const p of pts) g.circle(p.x, p.y, B.r * 0.17).fill({ color: 0xffffff, alpha: 0.95 });
-    const enough = r.chain.length >= f.minChain;
-    g.circle(last.x, last.y, B.r * (enough ? 0.3 : 0.22)).fill({ color: enough ? 0xffffff : color.glow, alpha: 1 });
+    this.link.draw(pts, tail, B.r, color.glow, r.chain.length >= f.minChain);
   }
 
   /** テスト用：描いている泡の数など */

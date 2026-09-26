@@ -123,14 +123,28 @@ async function start(): Promise<void> {
   window.setInterval(() => runtime.frame(performance.now()), bal.tickSeconds * 1000);
   window.setInterval(refreshView, 1000 / bal.display.uiHz);
   const modeOf = (screen: string): WorldMode => (screen === 'title' ? 'title' : screen === 'result' ? 'result' : 'game');
+  /** 描画1回にかかった時間と、フレームの間隔（ミリ秒）の移動平均（テスト用の窓口で読む） */
+  let renderMs = 0;
+  let frameMs = 16;
+  let lastLoop = 0;
   const loop = (now: number) => {
+    if (lastLoop > 0) frameMs = frameMs * 0.9 + Math.min(1000, now - lastLoop) * 0.1;
+    lastLoop = now;
     // 画面の大きさの変化は、知らせ（resize）が来ない場合もあるので毎フレーム見る
     const L = useGame.getState().layout;
     if (Math.abs(L.vw - window.innerWidth) > 0.5 || Math.abs(L.vh - window.innerHeight) > 0.5) applyLayout();
     runtime.frame(performance.now());
     const st = useGame.getState();
-    const events = runtime.drainWorldEvents();
-    world?.render(runtime.state, events, modeOf(st.screen), st.reduced, now, bal.chain.min);
+    // シートを開いている間は景色を止める（すりガラスのぼかしも軽くなり、電池も減らない）
+    if (world && st.sheet === null) {
+      const events = runtime.drainWorldEvents();
+      const t0 = performance.now();
+      world.render(runtime.state, events, modeOf(st.screen), st.reduced, now, bal.chain.min);
+      renderMs = renderMs * 0.9 + (performance.now() - t0) * 0.1;
+    } else if (!world) {
+      // 絵が出せないときも、出来事はためこまない
+      runtime.drainWorldEvents();
+    }
     requestAnimationFrame(loop);
   };
   requestAnimationFrame(loop);
@@ -200,6 +214,7 @@ async function start(): Promise<void> {
         pause: () => pauseGame(),
         worldReady: () => world !== null,
         worldStats: () => world?.stats() ?? null,
+        renderMs: () => ({ render: renderMs, frame: frameMs }),
         runtime: () => game(),
       },
     });

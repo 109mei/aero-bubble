@@ -29,18 +29,16 @@ export async function startPlaying(page: Page): Promise<void> {
   await expect.poll(() => debug<{ round: { phase: string } | null }>(page, 'state()').then((s) => s.round?.phase)).toBe('playing');
 }
 
-/** 泡の上を指でなぞる（ページの指の操作として、1つずつ間を通って動かす） */
+/**
+ * 泡の上を指でなぞる（泡の中心から中心へ1回ずつ動かす。間の泡は、ゲームが通った道を調べて拾う）。
+ * ブラウザは指の動きを1フレームに1回まとめて届けるので、動かす回数を少なくする
+ */
 export async function trace(page: Page, points: Point[]): Promise<void> {
   const [first, ...rest] = points;
   if (!first) return;
   await page.mouse.move(first.x, first.y);
   await page.mouse.down();
-  let prev = first;
-  for (const p of rest) {
-    await page.mouse.move((prev.x + p.x) / 2, (prev.y + p.y) / 2, { steps: 2 });
-    await page.mouse.move(p.x, p.y, { steps: 2 });
-    prev = p;
-  }
+  for (const p of rest) await page.mouse.move(p.x, p.y);
   await page.mouse.up();
 }
 

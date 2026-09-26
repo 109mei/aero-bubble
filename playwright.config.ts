@@ -8,11 +8,13 @@ export default defineConfig({
   testMatch: /.*\.spec\.ts/,
   testIgnore: /(screens|og)\.spec\.ts/,
   fullyParallel: true,
-  workers: process.env.CI ? 2 : 4,
+  // GitHub Actions には GPU がなく、描画がソフトウェアで重いので、1つずつ流して時間も長めにとる
+  workers: process.env.CI ? 1 : 4,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
-  timeout: 60_000,
+  timeout: process.env.CI ? 120_000 : 60_000,
+  expect: { timeout: process.env.CI ? 15_000 : 5_000 },
   use: {
     baseURL: `http://localhost:${PORT}/aero-bubble/`,
     ...devices['Pixel 7'],
@@ -23,6 +25,8 @@ export default defineConfig({
     locale: 'ja-JP',
     colorScheme: 'light',
     trace: 'retain-on-failure',
+    // PW_SOFTWARE_GL=1：GPU を使わない描画（GitHub Actions と同じ）で試す
+    launchOptions: process.env.PW_SOFTWARE_GL ? { args: ['--disable-gpu'] } : {},
   },
   projects: [{ name: 'chromium-390x844' }],
   webServer: {

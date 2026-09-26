@@ -325,6 +325,27 @@ export function paintDroplet(ctx: Ctx, S: number): void {
   ctx.fill();
 }
 
+/** つなぐ線の帯（横に伸ばして使う。上下のふちはやわらかくぼかす） */
+export function paintBeam(ctx: Ctx, w: number, h: number): void {
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, 'rgba(255,255,255,0)');
+  g.addColorStop(0.25, 'rgba(255,255,255,0.75)');
+  g.addColorStop(0.5, 'rgba(255,255,255,1)');
+  g.addColorStop(0.75, 'rgba(255,255,255,0.75)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+}
+
+/** ふちのくっきりした白い丸（つなぎ目の点） */
+export function paintDot(ctx: Ctx, S: number): void {
+  const c = S / 2;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.beginPath();
+  ctx.arc(c, c, c - 1, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 /** 4つの光の筋のきらめき */
 export function paintSparkle(ctx: Ctx, S: number): void {
   const c = S / 2;
