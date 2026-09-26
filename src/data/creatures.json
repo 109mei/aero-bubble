@@ -1,0 +1,79 @@
+[
+  {
+    "id": "goldfish",
+    "name": "きんぎょ",
+    "place": "tank",
+    "desc": "はじめての仲間。海のまんなかをひらひら泳ぐ",
+    "cond": { "type": "rounds", "n": 1 }
+  },
+  {
+    "id": "clownfish",
+    "name": "クマノミ",
+    "place": "tank",
+    "desc": "アクアボムの光が好きな、しましまの小さな魚",
+    "cond": { "type": "chain", "n": 7 }
+  },
+  {
+    "id": "tetra",
+    "name": "ネオンテトラ",
+    "place": "tank",
+    "desc": "青く光るしま模様。群れでいっしょに向きを変える",
+    "cond": { "type": "popped", "n": 500 }
+  },
+  {
+    "id": "jellyfish",
+    "name": "クラゲ",
+    "place": "tank",
+    "desc": "エアロタイムの光に集まって、ふわふわ浮かぶ",
+    "cond": { "type": "fevers", "n": 5 }
+  },
+  {
+    "id": "dolphin",
+    "name": "イルカ",
+    "place": "tank",
+    "desc": "高い点数が大好き。水の中をくるりと泳ぐ",
+    "cond": { "type": "score", "n": 60000 }
+  },
+  {
+    "id": "rainbow",
+    "name": "にじ",
+    "place": "sky",
+    "desc": "プリズムの光から生まれた、空にかかる七色の橋",
+    "cond": { "type": "chain", "n": 11 }
+  },
+  {
+    "id": "turtle",
+    "name": "ウミガメ",
+    "place": "tank",
+    "desc": "ゆっくり泳ぐ長生きの旅人",
+    "cond": { "type": "popped", "n": 2000 }
+  },
+  {
+    "id": "turbine",
+    "name": "ふうしゃ",
+    "place": "sky",
+    "desc": "丘の上でくるくる回る白い風車。きれいな風の力",
+    "cond": { "type": "feversInRound", "n": 4 }
+  },
+  {
+    "id": "whale",
+    "name": "クジラ",
+    "place": "tank",
+    "desc": "海の奥をゆったり横切る、いちばん大きな仲間",
+    "cond": { "type": "score", "n": 150000 }
+  },
+  {
+    "id": "manta",
+    "name": "マンタ",
+    "place": "tank",
+    "desc": "大きなひれで、空を飛ぶように泳ぐ",
+    "cond": { "type": "popped", "n": 7000 }
+  },
+  {
+    "id": "earth",
+    "name": "ちきゅう",
+    "place": "sky",
+    "desc": "みんなが集まった青い星。空の向こうでつやつや光る",
+    "cond": { "type": "all" }
+  }
+]

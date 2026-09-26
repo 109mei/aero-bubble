@@ -1,0 +1,24 @@
+{
+  "tickSeconds": 0.05,
+  "board": { "cols": 7, "rows": 8, "colors": 5 },
+  "round": {
+    "seconds": 60,
+    "countdownSeconds": 3,
+    "warnSeconds": 5,
+    "lastBurstIntervalSeconds": 0.4,
+    "endDelaySeconds": 1.2
+  },
+  "chain": { "min": 3 },
+  "score": {
+    "perBubble": 100,
+    "lengthStep": 100,
+    "burstPerBubble": 120,
+    "bombBonus": 500,
+    "prismBonus": 1000
+  },
+  "specials": { "bombAt": 7, "prismAt": 11, "bombRadius": 2 },
+  "combo": { "windowSeconds": 2.5, "step": 0.04, "cap": 25 },
+  "fever": { "need": 50, "needGrowth": 10, "needMax": 90, "seconds": 6, "multiplier": 2 },
+  "display": { "uiHz": 10, "maxTicksPerFrame": 20, "recentScores": 10 },
+  "save": { "autosaveSeconds": 5 }
+}

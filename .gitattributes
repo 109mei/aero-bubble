@@ -1,0 +1,5 @@
+# 改行は LF にそろえる（Windows でも作業中のファイルを CRLF に変えない）
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.webp binary
